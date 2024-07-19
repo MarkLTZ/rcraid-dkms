@@ -27,7 +27,11 @@
 #define RC_STHEXT_REDO_STRICT_TYPES
 #endif //int
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,18,0)
 #include <stdarg.h>
+#else
+#include <linux/stdarg.h>
+#endif
 
 #ifdef RC_STHEXT_REDO_STRICT_TYPES
 #define int Cannot_USE_int_because_it_is_ambiguous

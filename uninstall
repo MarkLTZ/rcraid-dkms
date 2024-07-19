@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/bash
 #
 #  Script to uninstall the RAIDCore drivers from the SDK for supported platforms
 #  (RedHat and SuSE).
@@ -20,7 +20,7 @@
 # open source license.
 #
 
-if [ $UID != 0 ] ; then
+if [ $UID != 0 ]; then
     echo "This script must be run as root"
     exit 1
 fi
@@ -31,6 +31,6 @@ elif [ -e /etc/SuSE-release ]; then
 	(cd src; sh ./uninstall_suse);
 else
 	KVERS=`uname -r`
-	rm -f /lib/modules/$(KVERS)/kernel/drivers/scsi/rcraid.ko
+	rm -f /lib/modules/$KVERS/kernel/drivers/scsi/rcraid.ko
 	exit
 fi

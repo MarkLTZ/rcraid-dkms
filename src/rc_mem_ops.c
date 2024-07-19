@@ -19,6 +19,7 @@
  *
  ****************************************************************************/
 
+#include <linux/version.h>
 #include "linux/signal.h"
 #include "linux/vmalloc.h"
 #include "linux/wait.h"
@@ -653,8 +654,30 @@ out:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,15,116)
+#define nv_pfn_valid pfn_valid
+#else
+/* pre-6.1.76 kernel pfn_valid version without GPL rcu_read_lock/unlock() */
+static inline int nv_pfn_valid(unsigned long pfn)
+{
+	struct mem_section *ms;
+
+	if (PHYS_PFN(PFN_PHYS(pfn)) != pfn)
+		return 0;
+
+	if (pfn_to_section_nr(pfn) >= NR_MEM_SECTIONS)
+		return 0;
+
+	ms = __pfn_to_section(pfn);
+	if (!valid_section(ms))
+		return 0;
+
+	return early_section(ms) || pfn_section_valid(ms, pfn);
+}
+#endif
+
 #ifndef virt_addr_valid
-#define virt_addr_valid(kaddr)   pfn_valid(__pa(kaddr) >> PAGE_SHIFT)
+#define virt_addr_valid(kaddr)   nv_pfn_valid(__pa(kaddr) >> PAGE_SHIFT)
 #endif
 
 /*
@@ -689,7 +712,7 @@ rc_check_addr_one(rc_uint64_t addr, rc_uint32_t id, rc_uint32_t    byte_count)
 	else { /* Physical address */
 		rc_uint64_t paddr = ((addr_elem_t)addr).phys_addr;
 		unsigned long long pfn = paddr >> PAGE_SHIFT;
-		if (!pfn_valid(pfn)) {
+		if (!nv_pfn_valid(pfn)) {
 			rc_printk(RC_PANIC,
 				  "rc_check_addr_one: Invalid physical address - 0x%llx\n",
 				  paddr);
@@ -746,7 +769,7 @@ rc_check_addr_list(rc_addr_list_t *addr_list)
 			else { /* Physical address */
 				unsigned long long pfn = addr_list->sg_list[i].dma_paddr >>
 					PAGE_SHIFT;
-				if (!pfn_valid(pfn)) {
+				if (!nv_pfn_valid(pfn)) {
 					rc_printk(RC_PANIC, "rc_check_addr_list: Invalid physical "
 						  "address - 0x%llu\n", ap->sg_list[i].dma_paddr);
 					return status;
